@@ -1,13 +1,73 @@
 'use client'
 
+import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import Navbar from '../components/Navbar'
+import { MealPlanCard } from '../components/MealPlanCard'
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
+import { motion } from "framer-motion"
+import { 
+  MEALS,
+  MEAL_TYPES,
+  DIET_TYPES,
+  dietaryTypes, 
+  cuisineTypes, 
+  healthGoals, 
+  allergens, 
+  activityLevels,
+  Meal,
+  MealCategory
+} from '../data/meal-plans'
+import { Loader2, CalendarDays, Activity, Goal, UtensilsCrossed } from 'lucide-react'
+
+interface FormData {
+  age: string;
+  height: string;
+  weight: string;
+  gender: string;
+  activityLevel: string;
+  healthGoals: string[];
+  dietType: string;
+  cuisinePreference: string;
+  allergies: string[];
+  mealCount: number;
+  spicePreference: number;
+}
+
+const initialFormData: FormData = {
+  age: '',
+  height: '',
+  weight: '',
+  gender: '',
+  activityLevel: '',
+  healthGoals: [],
+  dietType: '',
+  cuisinePreference: '',
+  allergies: [],
+  mealCount: 3,
+  spicePreference: 2,
+}
 
 export default function MealPlannerPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const [formData, setFormData] = useState<FormData>(initialFormData)
+  const [loading, setLoading] = useState(false)
+  const [generatedPlan, setGeneratedPlan] = useState<Record<string, { breakfast: Meal[], lunch: Meal[], dinner: Meal[] }> | null>(null)
 
   useEffect(() => {
     if (!user) {
@@ -15,671 +75,325 @@ export default function MealPlannerPage() {
     }
   }, [user, router])
 
-  if (!user) {
-    return null // or a loading spinner
+  const handleInputChange = (field: keyof FormData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
   }
+
+  const handleMultiSelect = (field: keyof FormData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: prev[field].includes(value)
+        ? prev[field].filter(item => item !== value)
+        : [...prev[field], value]
+    }))
+  }
+
+  const generateMealPlan = () => {
+    const weekPlan: Record<string, { breakfast: Meal[], lunch: Meal[], dinner: Meal[] }> = {}
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+    days.forEach(day => {
+      weekPlan[day] = {
+        breakfast: [getRandomMeal(MEALS.breakfast[formData.dietType as keyof MealCategory])],
+        lunch: [getRandomMeal(MEALS.lunch[formData.dietType as keyof MealCategory])],
+        dinner: [getRandomMeal(MEALS.dinner[formData.dietType as keyof MealCategory])]
+      }
+    })
+
+    return weekPlan
+  }
+
+  const getRandomMeal = (meals: Meal[]): Meal => {
+    return meals[Math.floor(Math.random() * meals.length)]
+  }
+
+  const handleSubmit = async () => {
+    setLoading(true)
+    try {
+      // Generate meal plan based on user preferences
+      const mealPlan = generateMealPlan()
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      setGeneratedPlan(mealPlan)
+    } catch (error) {
+      console.error('Error generating meal plan:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!user) return null
 
   return (
     <div className="min-h-screen bg-cooking">
       <Navbar />
-      <div className="min-h-screen bg-black/50 p-8 pt-24"> {/* Added pt-24 for navbar space */}
-        <div className="max-w-4xl mx-auto bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-8">
-          <h1 className="text-4xl font-bold text-green-700 mb-8 text-center">
-            Meal Planner
-          </h1>
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <p className="text-gray-600 text-center mb-8">
-              Plan your weekly meals with our intelligent meal planning system. Get personalized recommendations and nutritional insights.
+      <div className="min-h-screen bg-black/50 p-8 pt-24">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-7xl mx-auto"
+        >
+          <div className="text-center mb-12">
+            <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-gray-200 mb-4">
+              Personalized Meal Planner
+            </h1>
+            <p className="text-white text-xl">
+              Your Journey to Healthier Eating Starts Here 🥗 ✨
             </p>
-            {/* Meal planner functionality will be added here */}
-            <div className="text-center text-gray-500">
-              Coming soon...
-            </div>
           </div>
-        </div>
+
+          {!generatedPlan ? (
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-8">
+                <Card className="p-6 bg-white/60 backdrop-blur-sm hover:bg-white/70 transition-all">
+                  <div className="flex items-center gap-2 mb-6">
+                    <Activity className="w-5 h-5 text-primary" />
+                    <h2 className="text-2xl font-bold">Personal Details</h2>
+                  </div>
+                  
+                  <div className="grid gap-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="age">Age</Label>
+                        <Input
+                          id="age"
+                          type="number"
+                          value={formData.age}
+                          onChange={(e) => handleInputChange('age', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gender">Gender</Label>
+                        <Select
+                          value={formData.gender}
+                          onValueChange={(value) => handleInputChange('gender', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="height">Height (cm)</Label>
+                        <Input
+                          id="height"
+                          type="number"
+                          value={formData.height}
+                          onChange={(e) => handleInputChange('height', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="weight">Weight (kg)</Label>
+                        <Input
+                          id="weight"
+                          type="number"
+                          value={formData.weight}
+                          onChange={(e) => handleInputChange('weight', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="activityLevel">Activity Level</Label>
+                      <Select
+                        value={formData.activityLevel}
+                        onValueChange={(value) => handleInputChange('activityLevel', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select activity level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activityLevels.map((level) => (
+                            <SelectItem key={level.value} value={level.value}>
+                              {level.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="p-6 bg-white/60 backdrop-blur-sm hover:bg-white/70 transition-all">
+                  <div className="flex items-center gap-2 mb-6">
+                    <Goal className="w-5 h-5 text-primary" />
+                    <h2 className="text-2xl font-bold">Health Goals</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      {healthGoals.map((goal) => (
+                        <Badge
+                          key={goal}
+                          variant={formData.healthGoals.includes(goal) ? "default" : "secondary"}
+                          className="cursor-pointer"
+                          onClick={() => handleMultiSelect('healthGoals', goal)}
+                        >
+                          {goal}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <div className="space-y-8">
+                <Card className="p-6 bg-white/60 backdrop-blur-sm hover:bg-white/70 transition-all">
+                  <div className="flex items-center gap-2 mb-6">
+                    <UtensilsCrossed className="w-5 h-5 text-primary" />
+                    <h2 className="text-2xl font-bold">Dietary Preferences</h2>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label>Diet Type</Label>
+                      <Select
+                        value={formData.dietType}
+                        onValueChange={(value) => handleInputChange('dietType', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select diet type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DIET_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Cuisine Preference</Label>
+                      <Select
+                        value={formData.cuisinePreference}
+                        onValueChange={(value) => handleInputChange('cuisinePreference', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select cuisine preference" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cuisineTypes.map((cuisine) => (
+                            <SelectItem key={cuisine} value={cuisine}>
+                              {cuisine}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Allergies</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {allergens.map((allergen) => (
+                          <Badge
+                            key={allergen}
+                            variant={formData.allergies.includes(allergen) ? "destructive" : "secondary"}
+                            className="cursor-pointer"
+                            onClick={() => handleMultiSelect('allergies', allergen)}
+                          >
+                            {allergen}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <Label>Spice Preference</Label>
+                      <div className="pt-2">
+                        <Slider
+                          min={1}
+                          max={4}
+                          step={1}
+                          value={[formData.spicePreference]}
+                          onValueChange={([value]) => handleInputChange('spicePreference', value)}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-sm mt-2">
+                          <span>Mild</span>
+                          <span>Medium</span>
+                          <span>Hot</span>
+                          <span>Very Spicy</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="p-6 bg-white/60 backdrop-blur-sm hover:bg-white/70 transition-all">
+                  <div className="flex items-center gap-2 mb-6">
+                    <CalendarDays className="w-5 h-5 text-primary" />
+                    <h2 className="text-2xl font-bold">Meal Planning</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Meals per Day</Label>
+                      <Slider
+                        min={2}
+                        max={6}
+                        step={1}
+                        value={[formData.mealCount]}
+                        onValueChange={([value]) => handleInputChange('mealCount', value)}
+                        className="w-full"
+                      />
+                      <div className="text-center mt-2">
+                        <Badge variant="secondary">{formData.mealCount} meals</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {Object.entries(generatedPlan).map(([day, meals]) => (
+                  <MealPlanCard
+                    key={day}
+                    day={day}
+                    meals={meals}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-8 text-center">
+            <Button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="px-8 py-6 text-lg bg-gradient-to-r from-black-500 to-white-400 hover:from-white-500 hover:to-white-500 text-white rounded-full transition-all duration-300 transform hover:scale-105"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Generating Your Meal Plan...
+                </>
+              ) : generatedPlan ? (
+                'Regenerate Meal Plan'
+              ) : (
+                'Generate Your Personalized Meal Plan'
+              )}
+            </Button>
+          </div>
+        </motion.div>
       </div>
     </div>
   )
 }
-
-
-// 'use client';
-
-// import { useState, useEffect } from 'react';
-// import { useAuth } from '../contexts/AuthContext';
-// import { useRouter } from 'next/navigation';
-// import Navbar from '../components/Navbar';
-// import Chart from 'chart.js/auto';
-
-// export default function MealPlannerPage() {
-//   const { user } = useAuth();
-//   const router = useRouter();
-//   const [mealPlan, setMealPlan] = useState(null);
-//   const [nutritionData, setNutritionData] = useState(null);
-//   const [formData, setFormData] = useState({
-//     height: '',
-//     weight: '',
-//     avoid: '',
-//     goals: '',
-//     gender: '',
-//     cuisine: ''
-//   });
-
-//   useEffect(() => {
-//     if (!user) {
-//       router.push('/auth/login');
-//     }
-//   }, [user, router]);
-
-//   const handleInputChange = (e) => {
-//     const { name, value } = e.target;
-//     setFormData((prevData) => ({ ...prevData, [name]: value }));
-//   };
-
-//   const fetchMealPlan = async () => {
-//     try {
-//       const response = await fetch('/api/mealPlan', {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify(formData)
-//       });
-
-//       const data = await response.json();
-//       setMealPlan(data.meals);
-//       setNutritionData(data.nutrition);
-//       generatePieChart(data.nutrition);
-//     } catch (error) {
-//       console.error('Error fetching meal plan:', error);
-//     }
-//   };
-
-//   const generatePieChart = (nutrition) => {
-//     const ctx = document.getElementById('nutritionChart').getContext('2d');
-//     new Chart(ctx, {
-//       type: 'pie',
-//       data: {
-//         labels: ['Carbs', 'Protein', 'Fat'],
-//         datasets: [
-//           {
-//             data: [nutrition.carbs, nutrition.protein, nutrition.fat],
-//             backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
-//           }
-//         ]
-//       },
-//       options: {
-//         responsive: true,
-//         plugins: {
-//           legend: { position: 'top' }
-//         }
-//       }
-//     });
-//   };
-
-//   if (!user) {
-//     return null; // or a loading spinner
-//   }
-
-//   return (
-//     <div className="min-h-screen bg-cooking">
-//       <Navbar />
-//       <div className="min-h-screen bg-black/50 p-8 pt-24">
-//         <div className="max-w-4xl mx-auto bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-8">
-//           <h1 className="text-4xl font-bold text-green-700 mb-8 text-center">
-//             Meal Planner
-//           </h1>
-//           <div className="bg-white p-6 rounded-lg shadow-lg">
-//             <p className="text-gray-600 text-center mb-8">
-//               Plan your weekly meals with our intelligent meal planning system. Get personalized recommendations and nutritional insights.
-//             </p>
-//             <div className="mb-8">
-//               {/* User Input Form */}
-//               <label className="block mb-4">
-//                 Height (cm):
-//                 <input
-//                   type="number"
-//                   name="height"
-//                   value={formData.height}
-//                   onChange={handleInputChange}
-//                   className="w-full p-2 border rounded"
-//                 />
-//               </label>
-//               <label className="block mb-4">
-//                 Weight (kg):
-//                 <input
-//                   type="number"
-//                   name="weight"
-//                   value={formData.weight}
-//                   onChange={handleInputChange}
-//                   className="w-full p-2 border rounded"
-//                 />
-//               </label>
-//               <label className="block mb-4">
-//                 Avoid (e.g., nuts, dairy):
-//                 <input
-//                   type="text"
-//                   name="avoid"
-//                   value={formData.avoid}
-//                   onChange={handleInputChange}
-//                   className="w-full p-2 border rounded"
-//                 />
-//               </label>
-//               <label className="block mb-4">
-//                 Personal Goals (e.g., weight loss, muscle gain):
-//                 <input
-//                   type="text"
-//                   name="goals"
-//                   value={formData.goals}
-//                   onChange={handleInputChange}
-//                   className="w-full p-2 border rounded"
-//                 />
-//               </label>
-//               <label className="block mb-4">
-//                 Gender:
-//                 <select
-//                   name="gender"
-//                   value={formData.gender}
-//                   onChange={handleInputChange}
-//                   className="w-full p-2 border rounded"
-//                 >
-//                   <option value="">Select</option>
-//                   <option value="male">Male</option>
-//                   <option value="female">Female</option>
-//                 </select>
-//               </label>
-//               <label className="block mb-4">
-//                 Cuisine Preference:
-//                 <input
-//                   type="text"
-//                   name="cuisine"
-//                   value={formData.cuisine}
-//                   onChange={handleInputChange}
-//                   className="w-full p-2 border rounded"
-//                 />
-//               </label>
-//               <button
-//                 onClick={fetchMealPlan}
-//                 className="bg-green-700 text-white px-4 py-2 rounded"
-//               >
-//                 Generate Meal Plan
-//               </button>
-//             </div>
-//             {/* Meal Plan Display */}
-//             {mealPlan && (
-//               <div>
-//                 <h2 className="text-2xl font-bold mb-4">Your Meal Plan:</h2>
-//                 <ul>
-//                   {mealPlan.map((meal, index) => (
-//                     <li key={index} className="mb-2">
-//                       {meal.title} - {meal.calories} Calories
-//                     </li>
-//                   ))}
-//                 </ul>
-//               </div>
-//             )}
-//             {/* Nutrition Pie Chart */}
-//             {nutritionData && (
-//               <div className="mt-8">
-//                 <h2 className="text-2xl font-bold mb-4">Nutrition Breakdown:</h2>
-//                 <canvas id="nutritionChart" width="400" height="400"></canvas>
-//               </div>
-//             )}
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
-//WORKING
-// 'use client'
-
-// import React, { useState, useEffect } from 'react';
-
-// import { useAuth } from '../contexts/AuthContext'
-// // import { useRouter } from 'next/navigation'
-// import { useRouter } from 'next/navigation';
-//  import Navbar from '../components/Navbar'
-// import { Card, CardContent } from '@/components/ui/card';
-// import { Button } from '@/components/ui/button';
-// import { Input } from '@/components/ui/input';
-// import { Select } from '@/components/ui/select';
-// import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
-
-// // Rest of the component remains the same...
-
-// const MealPlannerPage = () => {
-//   const { user } = useAuth();
-//   const router = useRouter();
-//   const [formData, setFormData] = useState({
-//     height: '',
-//     weight: '',
-//     gender: '',
-//     avoidances: '',
-//     goals: '',
-//     cuisineType: '',
-//   });
-//   const [mealPlan, setMealPlan] = useState(null);
-//   const [nutritionData, setNutritionData] = useState(null);
-
-//   useEffect(() => {
-//     if (!user) {
-//       router.push('/auth/login');
-//     }
-//   }, [user, router]);
-
-//   if (!user) return null;
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     // Here you would make API calls to Spoonacular and Groq
-//     // For demo, setting sample data
-//     setMealPlan({
-//       monday: { breakfast: "Oatmeal with berries", lunch: "Quinoa salad", dinner: "Grilled salmon" },
-//       tuesday: { breakfast: "Greek yogurt parfait", lunch: "Turkey wrap", dinner: "Chicken stir-fry" },
-//       // ... other days
-//     });
-
-//     setNutritionData([
-//       { name: 'Protein', value: 30 },
-//       { name: 'Carbs', value: 45 },
-//       { name: 'Fats', value: 25 }
-//     ]);
-//   };
-
-//   const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
-
-//   return (
-//     <div className="min-h-screen bg-cooking">
-//       <Navbar />
-//       <div className="min-h-screen bg-black/50 p-8 pt-24">
-//         <div className="max-w-4xl mx-auto bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-8">
-//           <h1 className="text-4xl font-bold text-green-700 mb-8 text-center">
-//             Meal Planner
-//           </h1>
-
-//           <Card className="mb-8">
-//             <CardContent className="p-6">
-//               <form onSubmit={handleSubmit} className="space-y-4">
-//                 <div className="grid grid-cols-2 gap-4">
-//                   <Input
-//                     placeholder="Height (cm)"
-//                     type="number"
-//                     value={formData.height}
-//                     onChange={(e) => setFormData({...formData, height: e.target.value})}
-//                   />
-//                   <Input
-//                     placeholder="Weight (kg)"
-//                     type="number"
-//                     value={formData.weight}
-//                     onChange={(e) => setFormData({...formData, weight: e.target.value})}
-//                   />
-//                   <select 
-//                     className="p-2 border rounded"
-//                     value={formData.gender}
-//                     onChange={(e) => setFormData({...formData, gender: e.target.value})}
-//                   >
-//                     <option value="">Select Gender</option>
-//                     <option value="male">Male</option>
-//                     <option value="female">Female</option>
-//                     <option value="other">Other</option>
-//                   </select>
-//                   <select
-//                     className="p-2 border rounded"
-//                     value={formData.cuisineType}
-//                     onChange={(e) => setFormData({...formData, cuisineType: e.target.value})}
-//                   >
-//                     <option value="">Select Cuisine Type</option>
-//                     <option value="italian">Italian</option>
-//                     <option value="asian">Asian</option>
-//                     <option value="mediterranean">Mediterranean</option>
-//                   </select>
-//                   <Input
-//                     placeholder="Food Avoidances (comma-separated)"
-//                     value={formData.avoidances}
-//                     onChange={(e) => setFormData({...formData, avoidances: e.target.value})}
-//                   />
-//                   <select
-//                     className="p-2 border rounded"
-//                     value={formData.goals}
-//                     onChange={(e) => setFormData({...formData, goals: e.target.value})}
-//                   >
-//                     <option value="">Select Goal</option>
-//                     <option value="weightLoss">Weight Loss</option>
-//                     <option value="muscle">Muscle Gain</option>
-//                     <option value="maintenance">Maintenance</option>
-//                   </select>
-//                 </div>
-//                 <Button type="submit" className="w-full">
-//                   Generate Meal Plan
-//                 </Button>
-//               </form>
-//             </CardContent>
-//           </Card>
-
-//           {mealPlan && (
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-//               <Card>
-//                 <CardContent className="p-6">
-//                   <h2 className="text-xl font-bold mb-4">7-Day Meal Plan</h2>
-//                   {Object.entries(mealPlan).map(([day, meals]) => (
-//                     <div key={day} className="mb-4">
-//                       <h3 className="font-semibold capitalize">{day}</h3>
-//                       <ul className="list-disc pl-5">
-//                         {Object.entries(meals).map(([meal, food]) => (
-//                           <li key={meal} className="capitalize">
-//                             {meal}: {food}
-//                           </li>
-//                         ))}
-//                       </ul>
-//                     </div>
-//                   ))}
-//                 </CardContent>
-//               </Card>
-
-//               <Card>
-//                 <CardContent className="p-6">
-//                   <h2 className="text-xl font-bold mb-4">Nutritional Breakdown</h2>
-//                   <div className="h-64">
-//                     <ResponsiveContainer width="100%" height="100%">
-//                       <PieChart>
-//                         <Pie
-//                           data={nutritionData}
-//                           cx="50%"
-//                           cy="50%"
-//                           labelLine={false}
-//                           label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-//                           outerRadius={80}
-//                           fill="#8884d8"
-//                           dataKey="value"
-//                         >
-//                           {nutritionData?.map((entry, index) => (
-//                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-//                           ))}
-//                         </Pie>
-//                         <Legend />
-//                       </PieChart>
-//                     </ResponsiveContainer>
-//                   </div>
-//                 </CardContent>
-//               </Card>
-//             </div>
-//           )}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default MealPlannerPage;
-
-
-
-// // 'use client'
-
-// // import { useAuth } from '../contexts/AuthContext'
-// // import { useRouter } from 'next/navigation'
-// // import Navbar from '../components/Navbar'
-// // import { Card, CardContent } from '@/components/ui/card';
-// // import { Button } from '@/components/ui/button';
-// // import { Input } from '@/components/ui/input';
-// // import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// // import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
-// // import { Plus, Minus } from 'lucide-react';
-// // import React, { useState, useEffect } from 'react';
-
-// // const MealPlannerPage = () => {
-// //   const { user } = useAuth();
-// //   const router = useRouter();
-// //   const [formData, setFormData] = useState({
-// //     height: '',
-// //     weight: '',
-// //     gender: '',
-// //     activityLevel: '',
-// //     fitnessGoal: '',
-// //     dietaryRestrictions: '',
-// //     cuisine: '',
-// //     spicePreference: 'mild'
-// //   });
-
-// //   const [mealPlan, setMealPlan] = useState(null);
-// //   const [nutritionData, setNutritionData] = useState([
-// //     { name: 'Carbs', value: 40, color: '#FFB84C' },
-// //     { name: 'Protein', value: 21, color: '#A084DC' },
-// //     { name: 'Fat', value: 39, color: '#16B3AC' }
-// //   ]);
-
-// //   useEffect(() => {
-// //     if (!user) {
-// //       router.push('/auth/login');
-// //     }
-// //   }, [user, router]);
-
-// //   if (!user) return null;
-
-// //   const handleSubmit = async (e) => {
-// //     e.preventDefault();
-// //     console.log('Form Data:', formData); // Debugging: Log form data
-
-// //     // Fetch meal plan from Spoonacular API
-// //     const apiUrl = `https://api.spoonacular.com/mealplanner/generate?apiKey=9c0219f8708845cc9800691ac5e75194&diet=${formData.dietaryRestrictions}&cuisine=${formData.cuisine}&targetCalories=2000`;
-
-// //     try {
-// //       const response = await fetch(apiUrl);
-// //       const data = await response.json();
-// //       console.log('Meal Plan Response:', data); // Debugging: Log response
-
-// //       if (data && data.meals) {
-// //         setMealPlan({
-// //           monday: data.meals[0],
-// //           tuesday: data.meals[1],
-// //           // Add more days as needed
-// //         });
-// //       } else {
-// //         console.error('No meal data found:', data);
-// //         alert('Error fetching meal plan.');
-// //       }
-
-// //       // Fetch nutritional information from Groq API (or a similar service)
-// //       const nutritionApiUrl = `https://api.groq.com/mealNutrition?apiKey=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&mealId=${data.meals[0].id}`;
-// //       const nutritionResponse = await fetch(nutritionApiUrl);
-// //       const nutritionData = await nutritionResponse.json();
-// //       console.log('Nutrition Data Response:', nutritionData); // Debugging: Log nutrition response
-
-// //       if (nutritionData) {
-// //         setNutritionData([
-// //           { name: 'Protein', value: nutritionData.protein, color: '#16B3AC' },
-// //           { name: 'Carbs', value: nutritionData.carbs, color: '#FFB84C' },
-// //           { name: 'Fat', value: nutritionData.fat, color: '#A084DC' }
-// //         ]);
-// //       } else {
-// //         console.error('No nutrition data found:', nutritionData);
-// //         alert('Error fetching nutrition data.');
-// //       }
-// //     } catch (error) {
-// //       console.error('Error fetching data:', error);
-// //       alert('Something went wrong while fetching data.');
-// //     }
-// //   };
-
-// //   return (
-// //     <div className="min-h-screen bg-cooking">
-// //       <Navbar />
-// //       <div className="min-h-screen bg-black/50 p-8 pt-24">
-// //         <div className="max-w-4xl mx-auto bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-8">
-// //           <h1 className="text-4xl font-bold text-green-700 mb-8 text-center">
-// //             Meal Planner
-// //           </h1>
-
-// //           <Card className="mb-8">
-// //             <CardContent className="p-6">
-// //               <form onSubmit={handleSubmit} className="space-y-6">
-// //                 {/* Personal Information */}
-// //                 <div className="space-y-4">
-// //                   <h2 className="text-xl font-semibold mb-4">Personal Information</h2>
-// //                   <div className="grid grid-cols-2 gap-4">
-// //                     <Input
-// //                       placeholder="Height (cm)"
-// //                       type="number"
-// //                       value={formData.height}
-// //                       onChange={(e) => setFormData({...formData, height: e.target.value})}
-// //                     />
-// //                     <Input
-// //                       placeholder="Weight (kg)"
-// //                       type="number"
-// //                       value={formData.weight}
-// //                       onChange={(e) => setFormData({...formData, weight: e.target.value})}
-// //                     />
-// //                   </div>
-
-// //                   <Select
-// //                     value={formData.gender}
-// //                     onValueChange={(value) => setFormData({...formData, gender: value})}
-// //                   >
-// //                     <SelectTrigger>
-// //                       <SelectValue placeholder="Select Gender" />
-// //                     </SelectTrigger>
-// //                     <SelectContent>
-// //                       <SelectItem value="male">Male</SelectItem>
-// //                       <SelectItem value="female">Female</SelectItem>
-// //                       <SelectItem value="other">Other</SelectItem>
-// //                     </SelectContent>
-// //                   </Select>
-
-// //                   <Select
-// //                     value={formData.activityLevel}
-// //                     onValueChange={(value) => setFormData({...formData, activityLevel: value})}
-// //                   >
-// //                     <SelectTrigger>
-// //                       <SelectValue placeholder="Activity Level" />
-// //                     </SelectTrigger>
-// //                     <SelectContent>
-// //                       <SelectItem value="sedentary">Sedentary</SelectItem>
-// //                       <SelectItem value="light">Light Active</SelectItem>
-// //                       <SelectItem value="moderate">Moderately Active</SelectItem>
-// //                       <SelectItem value="very">Very Active</SelectItem>
-// //                     </SelectContent>
-// //                   </Select>
-// //                 </div>
-
-// //                 {/* Goals & Preferences */}
-// //                 <div className="space-y-4">
-// //                   <h2 className="text-xl font-semibold mb-4">Goals & Preferences</h2>
-// //                   <Select
-// //                     value={formData.fitnessGoal}
-// //                     onValueChange={(value) => setFormData({...formData, fitnessGoal: value})}
-// //                   >
-// //                     <SelectTrigger>
-// //                       <SelectValue placeholder="Fitness Goal" />
-// //                     </SelectTrigger>
-// //                     <SelectContent>
-// //                       <SelectItem value="weightLoss">Weight Loss</SelectItem>
-// //                       <SelectItem value="muscle">Muscle Gain</SelectItem>
-// //                       <SelectItem value="maintenance">Maintenance</SelectItem>
-// //                     </SelectContent>
-// //                   </Select>
-
-// //                   <Select
-// //                     value={formData.dietaryRestrictions}
-// //                     onValueChange={(value) => setFormData({...formData, dietaryRestrictions: value})}
-// //                   >
-// //                     <SelectTrigger>
-// //                       <SelectValue placeholder="Dietary Restrictions" />
-// //                     </SelectTrigger>
-// //                     <SelectContent>
-// //                       <SelectItem value="none">None</SelectItem>
-// //                       <SelectItem value="vegetarian">Vegetarian</SelectItem>
-// //                       <SelectItem value="vegan">Vegan</SelectItem>
-// //                       <SelectItem value="glutenFree">Gluten Free</SelectItem>
-// //                     </SelectContent>
-// //                   </Select>
-// //                 </div>
-
-// //                 {/* Regional Preferences */}
-// //                 <div className="space-y-4">
-// //                   <h2 className="text-xl font-semibold mb-4">Regional Preferences</h2>
-// //                   <Select
-// //                     value={formData.cuisine}
-// //                     onValueChange={(value) => setFormData({...formData, cuisine: value})}
-// //                   >
-// //                     <SelectTrigger>
-// //                       <SelectValue placeholder="Preferred Cuisine" />
-// //                     </SelectTrigger>
-// //                     <SelectContent>
-// //                       <SelectItem value="italian">Italian</SelectItem>
-// //                       <SelectItem value="asian">Asian</SelectItem>
-// //                       <SelectItem value="mediterranean">Mediterranean</SelectItem>
-// //                       <SelectItem value="indian">Indian</SelectItem>
-// //                     </SelectContent>
-// //                   </Select>
-
-// //                   <div className="space-y-2">
-// //                     <label className="block text-sm font-medium">Spice Preference</label>
-// //                     <div className="flex items-center space-x-2">
-// //                       <span className="text-sm">Mild</span>
-// //                       <input
-// //                         type="range"
-// //                         min="1"
-// //                         max="5"
-// //                         value={formData.spicePreference}
-// //                         onChange={(e) => setFormData({...formData, spicePreference: e.target.value})}
-// //                         className="flex-1"
-// //                       />
-// //                       <span className="text-sm">Very Spicy</span>
-// //                     </div>
-// //                   </div>
-// //                 </div>
-
-// //                 <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-green-700">
-// //                   Generate Meal Plan
-// //                 </Button>
-// //               </form>
-// //             </CardContent>
-// //           </Card>
-
-// //           {mealPlan && (
-// //             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-// //               {/* Meal Plan Display */}
-// //               <Card>
-// //                 <CardContent className="p-6">
-// //                   <h2 className="text-xl font-semibold mb-4">Your 7-Day Meal Plan</h2>
-// //                   {/* Meal plan content */}
-// //                 </CardContent>
-// //               </Card>
-
-// //               {/* Nutrition Chart */}
-// //               <Card>
-// //                 <CardContent className="p-6">
-// //                   <h2 className="text-xl font-semibold mb-4">Nutritional Breakdown</h2>
-// //                   <ResponsiveContainer width="100%" height={300}>
-// //                     <PieChart>
-// //                       <Pie
-// //                         data={nutritionData}
-// //                         dataKey="value"
-// //                         nameKey="name"
-// //                         cx="50%"
-// //                         cy="50%"
-// //                         outerRadius={100}
-// //                         fill="#8884d8"
-// //                         label
-// //                       >
-// //                         {nutritionData.map((entry, index) => (
-// //                           <Cell key={`cell-${index}`} fill={entry.color} />
-// //                         ))}
-// //                       </Pie>
-// //                       <Legend />
-// //                     </PieChart>
-// //                   </ResponsiveContainer>
-// //                 </CardContent>
-// //               </Card>
-// //             </div>
-// //           )}
-// //         </div>
-// //       </div>
-// //     </div>
-// //   );
-// // };
-
-// // export default MealPlannerPage;
 

@@ -17,14 +17,14 @@
 }
 
 .bg-vegetables {
-  background-image: url('/vegetables-bg.png');
+  background-image: url('/pixelcut-export.png');
   background-size: cover;
   background-position: center;
 
 }
 
 .bg-cooking {
-  background-image: url('/cooking-bg.jpg');
+  background-image: url('/bg.jpeg');
   background-size: cover;
   background-position: center;
 }

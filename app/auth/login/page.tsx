@@ -6,49 +6,36 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '../../contexts/AuthContext'
 
 export default function LoginPage() {
-  const router = useRouter()
-  const { user, login } = useAuth()
-  const [error, setError] = useState<string>('')
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const { user, login } = useAuth();
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
-      router.push('/')
+      router.push('/');
     }
-  }, [user, router])
+  }, [user, router]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError('')
-    setLoading(true)
+    event.preventDefault();
+    setError('');
+    setLoading(true);
 
-    const formData = new FormData(event.currentTarget)
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Login failed')
-      }
-
-      login(email)
-      router.push('/')
-    } catch (err) {
-      setError('Invalid email or password')
+      await login(email, password);
+      router.push('/');
+    } catch (err: any) {
+      setError(err.message || 'Failed to log in');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
-  if (user) {
-    return null // or a loading spinner
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-vegetables">

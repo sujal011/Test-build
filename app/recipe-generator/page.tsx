@@ -342,7 +342,7 @@ export default function RecipeGeneratorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-cooking">
       <Navbar />
       <div className="min-h-screen p-8 pt-24">
         <motion.div 

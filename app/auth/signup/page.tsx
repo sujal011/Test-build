@@ -1,60 +1,43 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '../../contexts/AuthContext'
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../contexts/AuthContext';
 
-export default function SignUpPage() {
-  const router = useRouter()
-  const { user, login } = useAuth()
-  const [error, setError] = useState<string>('')
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (user) {
-      router.push('/')
-    }
-  }, [user, router])
+export default function SignUpForm() {
+  const router = useRouter();
+  const { user, signup } = useAuth();
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError('')
-    setLoading(true)
+    event.preventDefault();
+    setError('');
+    setLoading(true);
 
-    const formData = new FormData(event.currentTarget)
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-    const confirmPassword = formData.get('confirmPassword') as string
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      setLoading(false)
-      return
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
     }
 
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Signup failed')
-      }
-
-      login(email)
-      router.push('/')
-    } catch (err) {
-      setError('Failed to create account')
+      await signup(email, password);
+      setSuccessMessage(
+        'Welcome to Flavour with Fusion! 🎉 We\'ve sent a verification email to your inbox. Please verify your email to start exploring delicious recipes!'
+      );
+    } catch (err: any) {
+      setError(err.message || 'Failed to create account');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
-  if (user) {
-    return null // or a loading spinner
   }
 
   return (
@@ -112,6 +95,12 @@ export default function SignUpPage() {
             <div className="text-red-500 text-sm text-center">{error}</div>
           )}
 
+          {successMessage && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded relative" role="alert">
+              <p className="text-sm">{successMessage}</p>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
@@ -129,6 +118,5 @@ export default function SignUpPage() {
         </p>
       </div>
     </div>
-  )
+  );
 }
-
